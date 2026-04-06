@@ -1,6 +1,6 @@
-# 🕷️ AI Web Scraper — Powered by Claude
+# 🕷️ AI Web Scraper
 
-Web scraper Python assisté par IA (Claude d'Anthropic) avec résolution de CAPTCHA intégrée.
+Web scraper Python assisté par IA avec résolution de CAPTCHA intégrée.
 
 ---
 
