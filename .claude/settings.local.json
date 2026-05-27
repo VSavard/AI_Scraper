@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"\\\\\\\\wsl.localhost\\\\ubuntu\\\\home\\\\vinch\\\\AI_Scraper\")",
+      "Bash(cd /mnt/wsl/instances/ubuntu/home/vinch/AI_Scraper)",
+      "Bash(wslpath \"\\\\\\\\\\\\\\\\wsl.localhost\\\\\\\\ubuntu\\\\\\\\home\\\\\\\\vinch\\\\\\\\AI_Scraper\")",
+      "Bash(wsl -d ubuntu -- bash -c \"mkdir -p ~/AI_Scraper/src/models ~/AI_Scraper/src/sources && echo done\")"
+    ]
+  }
+}
