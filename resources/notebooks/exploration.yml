@@ -1,0 +1,28 @@
+resources:
+  jobs:
+    exploration_notebook_job:
+      name: "Exploration des données [${bundle.target}]"
+      description: >
+        Notebook d'exploration des offres et contacts extraits.
+        À exécuter manuellement pour analyser et valider les données.
+
+      job_clusters:
+        - job_cluster_key: main
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+            autotermination_minutes: 60
+            spark_env_vars:
+              ANTHROPIC_API_KEY: "{{secrets/${var.secret_scope}/anthropic_api_key}}"
+              ADZUNA_APP_ID:     "{{secrets/${var.secret_scope}/adzuna_app_id}}"
+              ADZUNA_APP_KEY:    "{{secrets/${var.secret_scope}/adzuna_app_key}}"
+
+      tasks:
+        - task_key: explore
+          job_cluster_key: main
+          notebook_task:
+            notebook_path: /Workspace/Bundles/ai-job-scraper/${bundle.target}/notebooks/exploration
+            base_parameters:
+              jobs_path:    "/dbfs/FileStore/ai_job_scraper/jobs_raw.json"
+              contacts_path: "/dbfs/FileStore/ai_job_scraper/contacts.json"

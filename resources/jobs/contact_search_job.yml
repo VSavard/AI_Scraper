@@ -1,0 +1,49 @@
+resources:
+  jobs:
+    contact_search_job:
+      name: "Recherche Contacts TI [${bundle.target}]"
+      description: >
+        Recherche les personnes en autorité TI pour les entreprises
+        identifiées lors de l'extraction des offres d'emploi.
+
+      schedule:
+        quartz_cron_expression: "0 0 8 * * ?"   # Tous les jours à 8h00 (après extraction)
+        timezone_id: America/Toronto
+        pause_status: UNPAUSED
+
+      job_clusters:
+        - job_cluster_key: main
+          new_cluster:
+            spark_version: "15.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 1
+            autotermination_minutes: 30
+            spark_env_vars:
+              ANTHROPIC_API_KEY: "{{secrets/${var.secret_scope}/anthropic_api_key}}"
+              ADZUNA_APP_ID:     "{{secrets/${var.secret_scope}/adzuna_app_id}}"
+              ADZUNA_APP_KEY:    "{{secrets/${var.secret_scope}/adzuna_app_key}}"
+
+      tasks:
+        - task_key: search_contacts
+          job_cluster_key: main
+          python_wheel_task:
+            package_name: ai-scraper
+            entry_point: ai-scraper
+            parameters:
+              - search-contacts
+              - --source
+              - all
+              - --query
+              - "data engineer ingénieur données développeur"
+              - --location
+              - Quebec
+              - --provider
+              - anthropic
+              - --output
+              - /dbfs/FileStore/ai_job_scraper/contacts.json
+          libraries:
+            - whl: /Workspace/Bundles/ai-job-scraper/${bundle.target}/artifacts/ai_scraper-*.whl
+
+      email_notifications:
+        on_failure:
+          - ${var.alert_email}

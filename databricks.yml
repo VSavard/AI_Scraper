@@ -1,0 +1,31 @@
+bundle:
+  name: ai-job-scraper
+
+variables:
+  workspace_host:
+    description: URL du workspace Databricks (ex: https://adb-xxx.azuredatabricks.net)
+    default: ""
+  secret_scope:
+    description: Nom du secret scope Databricks contenant les clés API
+    default: ai-job-scraper
+
+workspace:
+  host: ${var.workspace_host}
+  root_path: /Workspace/Bundles/${bundle.name}/${bundle.target}
+
+artifacts:
+  ai_scraper_whl:
+    type: whl
+    build: poetry build
+    path: .
+
+include:
+  - resources/**/*.yml
+
+targets:
+  dev:
+    mode: development
+    default: true
+
+  prod:
+    mode: production
