@@ -7,28 +7,29 @@ from src.models.job import Job
 from src.providers.base import AIProvider
 
 
-_SYSTEM = """You are a job data extraction assistant.
-Given raw text from a job posting page, extract structured information and return ONLY valid JSON.
-No explanation, no markdown, just the JSON object."""
+_SYSTEM = """Tu es un assistant d'extraction de données d'emploi.
+À partir du texte brut d'une offre d'emploi, extrais les informations structurées et retourne UNIQUEMENT un JSON valide.
+Aucune explication, aucun markdown — seulement l'objet JSON."""
 
-_PROMPT_TEMPLATE = """Extract the following fields from this job posting text.
-Return a JSON object with these exact keys:
-- title (string)
-- company (string)
-- location (string)
-- contract_type (string: "full-time", "part-time", "contract", "internship", or "")
-- salary_min (number or null)
-- salary_max (number or null)
-- salary_currency (string, default "CAD")
-- skills (array of strings, max 15)
-- description (string, 2-3 sentence summary)
+_PROMPT_TEMPLATE = """Extrais les champs suivants de cette offre d'emploi.
+Retourne un objet JSON avec ces clés exactes :
+- title (string) : intitulé du poste
+- company (string) : nom de l'entreprise
+- location (string) : ville et province (ex: "Montréal, QC")
+- contract_type (string) : "permanent" | "temporary" | "contract" | "internship" | ""
+- work_schedule (string) : "full-time" | "part-time" | ""
+- technologies (array de strings, max 15) : langages, frameworks, outils, plateformes
+- salary_min (number ou null)
+- salary_max (number ou null)
+- salary_currency (string, défaut "CAD")
+- description (string) : résumé 2-3 phrases
 
-Job posting text:
+Texte de l'offre :
 {text}"""
 
 
 class JobExtractor:
-    """Use an AI provider to extract structured job data from raw page text."""
+    """Utilise un provider IA pour extraire les données structurées d'une offre."""
 
     def __init__(self, provider: AIProvider) -> None:
         self._provider = provider
@@ -37,8 +38,7 @@ class JobExtractor:
         if not job.description:
             return job
 
-        text = job.description[:6000]
-        prompt = _PROMPT_TEMPLATE.format(text=text)
+        prompt = _PROMPT_TEMPLATE.format(text=job.description[:6000])
 
         try:
             raw = self._provider.complete(system=_SYSTEM, user=prompt, max_token=1024)
@@ -50,10 +50,11 @@ class JobExtractor:
         job.company = data.get("company") or job.company
         job.location = data.get("location") or job.location
         job.contract_type = data.get("contract_type") or job.contract_type
+        job.work_schedule = data.get("work_schedule") or job.work_schedule
+        job.technologies = data.get("technologies") or job.technologies
         job.salary_min = data.get("salary_min") or job.salary_min
         job.salary_max = data.get("salary_max") or job.salary_max
         job.salary_currency = data.get("salary_currency") or job.salary_currency
-        job.skills = data.get("skills") or job.skills
         job.description = data.get("description") or job.description
         return job
 

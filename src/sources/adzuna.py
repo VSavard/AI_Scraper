@@ -5,14 +5,16 @@ from typing import Any
 
 import requests
 
-from src.models.job import Job
-
 
 _BASE_URL = "https://api.adzuna.com/v1/api/jobs"
 
 
 class AdzunaSource:
-    """Fetch job listings from the Adzuna API."""
+    """Récupère les offres d'emploi brutes depuis l'API Adzuna.
+
+    Retourne des dicts bruts — la transformation vers Job est déléguée
+    à AdzunaTransformation.
+    """
 
     def __init__(
         self,
@@ -30,7 +32,7 @@ class AdzunaSource:
         location: str = "",
         page: int = 1,
         results_per_page: int = 20,
-    ) -> list[Job]:
+    ) -> list[dict]:
         params: dict[str, Any] = {
             "app_id": self.app_id,
             "app_key": self.app_key,
@@ -44,22 +46,4 @@ class AdzunaSource:
         url = f"{_BASE_URL}/{self.country}/search/{page}"
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
-
-        return [self._to_job(item) for item in response.json().get("results", [])]
-
-    def _to_job(self, data: dict) -> Job:
-        salary = data.get("salary_min"), data.get("salary_max")
-        location = data.get("location", {}).get("display_name", "")
-        company = data.get("company", {}).get("display_name", "")
-
-        return Job(
-            title=data.get("title", ""),
-            company=company,
-            location=location,
-            url=data.get("redirect_url", ""),
-            description=data.get("description", ""),
-            salary_min=float(salary[0]) if salary[0] else None,
-            salary_max=float(salary[1]) if salary[1] else None,
-            contract_type=data.get("contract_type", ""),
-            source="adzuna",
-        )
+        return response.json().get("results", [])

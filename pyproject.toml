@@ -1,18 +1,20 @@
 [tool.poetry]
 name = "ai-scraper"
 version = "0.1.0"
-description = "Web Scraper assisté par IA avec résolution de CAPTCHA via Claude"
+description = "Extracteur d'offres d'emploi assisté par IA"
 authors = ["Vince <vince@leretablissement.ca>"]
 readme = "README.md"
-packages = [{ include = "ai_scraper" }]
+packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 anthropic = ">=0.25.0"
 openai = ">=1.30.0"
+google-genai = ">=1.0.0"
+python-dotenv = ">=1.0.0"
+duckduckgo-search = ">=6.0.0"
 requests = ">=2.31.0"
 beautifulsoup4 = ">=4.12.0"
-Pillow = ">=10.0.0"
 lxml = ">=5.0.0"
 
 [tool.poetry.group.dev.dependencies]
@@ -22,14 +24,14 @@ ruff = ">=0.4.0"
 pre-commit = ">=3.7.0"
 
 [tool.poetry.scripts]
-ai-scraper = "ai_scraper.main:main"
+ai-scraper = "src.main:main"
 
 # ─── Ruff ────────────────────────────────────────────────────────────────────
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["ai_scraper"]
+src = ["src"]
 
 [tool.ruff.lint]
 select = [
@@ -51,7 +53,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["ai_scraper"]
+known-first-party = ["src"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -62,10 +64,10 @@ docstring-code-format = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=ai_scraper --cov-report=term-missing -v"
+addopts = "--cov=src --cov-report=term-missing -v"
 
 [tool.coverage.run]
-source = ["ai_scraper"]
+source = ["src"]
 omit = ["tests/*"]
 
 # ─── Build ────────────────────────────────────────────────────────────────────

@@ -1,0 +1,28 @@
+resources:
+  pipelines:
+    ingestion_pipeline:
+      name: "Pipeline Ingestion Offres d'Emploi [${bundle.target}]"
+      description: >
+        Pipeline Delta Live Tables qui ingère les JSON produits par les jobs
+        d'extraction et de recherche de contacts dans des tables Delta.
+
+      development: ${bundle.target == 'dev'}
+      continuous: false
+
+      catalog: main
+      target: ai_job_scraper_${bundle.target}
+
+      clusters:
+        - label: default
+          num_workers: 1
+          spark_env_vars:
+            ANTHROPIC_API_KEY: "{{secrets/${var.secret_scope}/anthropic_api_key}}"
+
+      libraries:
+        - notebook:
+            path: /Workspace/Bundles/ai-job-scraper/${bundle.target}/notebooks/ingestion_pipeline
+
+      configuration:
+        jobs_input_path:    "/dbfs/FileStore/ai_job_scraper/jobs_raw.json"
+        contacts_input_path: "/dbfs/FileStore/ai_job_scraper/contacts.json"
+        pipelines.applyChangesPreviewEnabled: "true"
