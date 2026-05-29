@@ -6,11 +6,15 @@ import sys
 from src.config import load_settings, validate
 from src.operations.contact_search import ContactSearchOperation
 from src.operations.extraction import ExtractionOperation
+from src.operations.fetch import FetchOperation
+from src.operations.processing import ProcessOperation
 from src.params import (
     build_parser,
     parse_contact_params,
     parse_extraction_params,
+    parse_fetch_params,
     parse_pipeline_params,
+    parse_process_params,
 )
 from src.providers import get_provider
 
@@ -19,14 +23,28 @@ def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
 
+    try:
+        if args.command == "fetch":
+            _cmd_fetch(args)
+            return                      # pas de provider ni de validate nécessaires
+
+        if args.command == "process":
+            pass                        # provider initialisé ci-dessous
+
+    except KeyboardInterrupt:
+        print("\nInterrompu.", file=sys.stderr)
+        sys.exit(0)
+
     settings = load_settings()
     validate(settings, provider=args.provider)
-
     provider_kwargs = {"model": args.model} if args.model else {}
     provider = get_provider(args.provider, **provider_kwargs)
 
     try:
-        if args.command == "extract":
+        if args.command == "process":
+            _cmd_process(args, provider)
+
+        elif args.command == "extract":
             _cmd_extract(args, provider)
 
         elif args.command == "search-contacts":
@@ -41,6 +59,46 @@ def main() -> None:
 
 
 # ── Commandes ─────────────────────────────────────────────────────────────────
+
+def _cmd_fetch(args) -> None:
+    """Télécharge les données brutes sans IA et sauvegarde en JSON."""
+    from src.sources.adzuna import AdzunaSource
+    from src.config import load_settings
+
+    settings = load_settings()
+    params = parse_fetch_params(args)
+
+    if not settings.adzuna_app_id or not settings.adzuna_app_key:
+        print(
+            "\nMissing secrets pour Adzuna — ajoutez dans .env :\n"
+            "  ADZUNA_APP_ID / ADZUNA_APP_KEY  — https://developer.adzuna.com/\n",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    op = FetchOperation(
+        adzuna=AdzunaSource(app_id=settings.adzuna_app_id, app_key=settings.adzuna_app_key),
+    )
+    print(f"Fetch : '{params.query}' | source={params.source} | lieu={params.location or 'tous'}")
+    result = op.run(params)
+    print(f"  {result['count']} offres brutes récupérées")
+
+    with open(params.output, "w", encoding="utf-8") as f:
+        import json
+        json.dump(result, f, ensure_ascii=False, indent=2)
+    print(f"Données brutes sauvegardées → {params.output}")
+
+
+def _cmd_process(args, provider) -> None:
+    """Traite un fichier JSON brut avec l'IA."""
+    params = parse_process_params(args)
+
+    op = ProcessOperation(provider=provider)
+    print(f"Traitement de '{params.input}'...")
+    results = op.run(params)
+    _display_jobs(results, params.top)
+    _save(results, params.output, label="offres traitées")
+
 
 def _cmd_extract(args, provider) -> None:
     from src.sources.adzuna import AdzunaSource
