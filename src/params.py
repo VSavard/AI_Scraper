@@ -36,6 +36,29 @@ class ContactSearchParams:
 
 
 @dataclass
+class FetchParams:
+    source: str           # adzuna | guichet-emploi | all
+    query: str
+    location: str
+    pages: int
+    results_per_page: int
+    output: str           # fichier JSON de sortie (obligatoire)
+
+
+@dataclass
+class ProcessParams:
+    input: str            # fichier JSON brut (raw_jobs_v1) ou déjà transformé
+    enrich: bool          # enrichissement via scraping HTML
+    ai_extract: bool      # extraction structurée IA
+    score: bool
+    criteria: str
+    provider: str
+    model: str | None
+    output: str | None
+    top: int | None
+
+
+@dataclass
 class PipelineParams:
     query: str
     location: str
@@ -58,11 +81,15 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Commandes :
-  extract          Extraire les offres depuis Adzuna et/ou le Guichet Emploi
+  fetch            Télécharger les données brutes (sans IA) et sauvegarder en JSON
+  process          Traiter un fichier brut existant avec l'IA (extraction + scoring)
+  extract          fetch + process en une seule passe
   search-contacts  Rechercher les contacts TI des entreprises trouvées
-  pipeline         Exécuter extract + search-contacts en séquence
+  pipeline         extract + search-contacts en séquence
 
 Exemples :
+  ai-scraper fetch --source all --query "data engineer" --output raw.json
+  ai-scraper process --input raw.json --criteria "Python, remote" --output jobs.json
   ai-scraper extract --source all --query "data engineer" --location Quebec
   ai-scraper search-contacts --query "ingénieur données" --location "Montréal"
   ai-scraper pipeline --query "développeur Python" --criteria "remote, senior"
@@ -70,6 +97,8 @@ Exemples :
     )
 
     sub = parser.add_subparsers(dest="command", required=True)
+    _add_fetch(sub)
+    _add_process(sub)
     _add_extract(sub)
     _add_search_contacts(sub)
     _add_pipeline(sub)
@@ -97,6 +126,30 @@ def _common_ai_args(p: argparse.ArgumentParser) -> None:
         help="Provider IA (défaut: anthropic)",
     )
     p.add_argument("--model", default=None, help="Modèle IA à utiliser")
+
+
+def _add_fetch(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "fetch",
+        help="Télécharger les données brutes sans IA et sauvegarder en JSON",
+    )
+    _common_source_args(p)
+    p.add_argument("--output", metavar="FILE", required=True, help="Fichier JSON de sortie (obligatoire)")
+
+
+def _add_process(sub: argparse._SubParsersAction) -> None:
+    p = sub.add_parser(
+        "process",
+        help="Traiter un fichier JSON brut avec l'IA (extraction + scoring)",
+    )
+    p.add_argument("--input", metavar="FILE", required=True, help="Fichier JSON brut produit par fetch")
+    _common_ai_args(p)
+    p.add_argument("--no-enrich", action="store_true", help="Ne pas scraper les pages individuelles")
+    p.add_argument("--no-extract", action="store_true", help="Désactiver l'extraction IA")
+    p.add_argument("--no-score", action="store_true", help="Désactiver le scoring IA")
+    p.add_argument("--criteria", default="", help="Critères de scoring (ex: 'Python, remote, senior')")
+    p.add_argument("--output", metavar="FILE", help="Fichier JSON de sortie")
+    p.add_argument("--top", type=int, default=None, help="Afficher uniquement les N meilleurs résultats")
 
 
 def _add_extract(sub: argparse._SubParsersAction) -> None:
@@ -157,6 +210,31 @@ def parse_contact_params(args: argparse.Namespace) -> ContactSearchParams:
         provider=args.provider,
         model=args.model,
         output=args.output,
+    )
+
+
+def parse_fetch_params(args: argparse.Namespace) -> FetchParams:
+    return FetchParams(
+        source=args.source,
+        query=args.query,
+        location=args.location,
+        pages=args.pages,
+        results_per_page=args.results,
+        output=args.output,
+    )
+
+
+def parse_process_params(args: argparse.Namespace) -> ProcessParams:
+    return ProcessParams(
+        input=args.input,
+        enrich=not args.no_enrich,
+        ai_extract=not args.no_extract,
+        score=not args.no_score,
+        criteria=args.criteria,
+        provider=args.provider,
+        model=args.model,
+        output=args.output,
+        top=args.top,
     )
 
 
